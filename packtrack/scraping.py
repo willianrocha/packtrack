@@ -1,15 +1,14 @@
 import os
 import re
-from HTMLParser import HTMLParser
 
-from BeautifulSoup import BeautifulSoup
+from bs4 import BeautifulSoup
 import requests
 from requests.exceptions import RequestException
 from zeep import Client as Zeep
 from zeep.cache import InMemoryCache
 from zeep.transports import Transport
 
-from correios import Encomenda, Status
+from packtrack.correios import Encomenda, Status
 
 
 class CorreiosWebsiteScraper(object):
@@ -50,7 +49,7 @@ class CorreiosWebsiteScraper(object):
 
         if html:
             try:
-                html = html.decode('latin-1')
+                html = html.encode('latin-1')
             except UnicodeDecodeError:
                 pass
             encomenda = Encomenda(numero)
@@ -59,20 +58,19 @@ class CorreiosWebsiteScraper(object):
             return encomenda
 
     def _text(self, value):
-        value = BeautifulSoup(value.strip()).text
-        return value.replace('&nbsp;', ' ')
+        value = BeautifulSoup(value.strip(), 'lxml').text
+        return value.replace('&nbsp;', ' ').replace('\xa0',' ')
 
     def _get_all_status_from_html(self, html):
         status = []
-        html_parser = HTMLParser()
-        if "<table" not in html:
+        if b'<table' not in html:
             return status
-        html_info = re.search('.*(<table.*</table>).*', html, re.S)
+        html_info = re.search(b'.*(<table.*</table>).*', html, re.S)
         if not html_info:
             return status
 
         table = html_info.group(1)
-        soup = BeautifulSoup(table)
+        soup = BeautifulSoup(table, 'lxml')
 
         for tr in soup.table:
             try:
@@ -80,15 +78,15 @@ class CorreiosWebsiteScraper(object):
             except AttributeError:
                 continue
             for td in tds:
-                content = td.renderContents().replace('\r', ' ') \
-                    .split('<br />')
-                class_ = td['class']
+                content = td.renderContents().replace(b'\r', b' ') \
+                    .split(b'<br/>')
+                class_ = td['class'][0]
                 if class_ == 'sroDtEvent':
-                    data = '%s %s' % (content[0].strip(), content[1].strip())
+                    data = '%s %s' % (content[0].strip().decode(), content[1].strip().decode())
                     local = '/'.join(self._text(content[2]).rsplit(' / ', 1)).upper()
                 elif class_ == 'sroLbEvent':
-                    situacao = html_parser.unescape(self._text(content[0]))
-                    detalhes = html_parser.unescape(self._text(content[1]))
+                    situacao = self._text(content[0].decode())
+                    detalhes = self._text(content[1].decode())
                     if detalhes:
                         detalhes = u'%s %s' % (situacao, detalhes)
                     status.append(Status(data=data, local=local,
