@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 import re
 
@@ -8,7 +10,7 @@ from zeep import Client as Zeep
 from zeep.cache import InMemoryCache
 from zeep.transports import Transport
 
-from packtrack.correios import Encomenda, Status
+from .correios import Encomenda, Status
 
 
 class CorreiosWebsiteScraper(object):
@@ -48,10 +50,6 @@ class CorreiosWebsiteScraper(object):
         html = response.content
 
         if html:
-            try:
-                html = html.encode('latin-1')
-            except UnicodeDecodeError:
-                pass
             encomenda = Encomenda(numero)
             for status in self._get_all_status_from_html(html):
                 encomenda.adicionar_status(status)
@@ -59,13 +57,13 @@ class CorreiosWebsiteScraper(object):
 
     def _text(self, value):
         value = BeautifulSoup(value.strip(), 'lxml').text
-        return value.replace('&nbsp;', ' ').replace('\xa0',' ')
+        return value.replace('&nbsp;', ' ').replace(u'\xa0',' ')
 
     def _get_all_status_from_html(self, html):
         status = []
-        if b'<table' not in html:
+        if '<table' not in html:
             return status
-        html_info = re.search(b'.*(<table.*</table>).*', html, re.S)
+        html_info = re.search('.*(<table.*</table>).*', html, re.S)
         if not html_info:
             return status
 
@@ -85,8 +83,8 @@ class CorreiosWebsiteScraper(object):
                     data = '%s %s' % (content[0].strip().decode(), content[1].strip().decode())
                     local = '/'.join(self._text(content[2]).rsplit(' / ', 1)).upper()
                 elif class_ == 'sroLbEvent':
-                    situacao = self._text(content[0].decode())
-                    detalhes = self._text(content[1].decode())
+                    situacao = self._text(content[0].decode('utf-8'))
+                    detalhes = self._text(content[1].decode('utf-8'))
                     if detalhes:
                         detalhes = u'%s %s' % (situacao, detalhes)
                     status.append(Status(data=data, local=local,
