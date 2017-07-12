@@ -1,4 +1,6 @@
 # coding: utf-8
+from __future__ import absolute_import
+
 from datetime import datetime
 import re
 
@@ -15,7 +17,7 @@ class EncomendaRepository(object):
         return func(numero, **kwargs)
 
     def _init_scraper(self, backend):
-        from packtrack.scraping import CorreiosWebsiteScraper, CorreiosRastroService
+        from .scraping import CorreiosWebsiteScraper, CorreiosRastroService
         if backend is None:
             backend = 'www2'
 
