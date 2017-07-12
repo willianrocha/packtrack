@@ -50,10 +50,6 @@ class CorreiosWebsiteScraper(object):
         html = response.content
 
         if html:
-            try:
-                html = html.encode('latin-1')
-            except UnicodeDecodeError:
-                pass
             encomenda = Encomenda(numero)
             for status in self._get_all_status_from_html(html):
                 encomenda.adicionar_status(status)
@@ -65,9 +61,9 @@ class CorreiosWebsiteScraper(object):
 
     def _get_all_status_from_html(self, html):
         status = []
-        if b'<table' not in html:
+        if '<table' not in html:
             return status
-        html_info = re.search(b'.*(<table.*</table>).*', html, re.S)
+        html_info = re.search('.*(<table.*</table>).*', html, re.S)
         if not html_info:
             return status
 
